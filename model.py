@@ -1,14 +1,21 @@
 import glob
 import numpy as np
-from models.model_utils import build_siamese_network, ContrastiveLoss
 import pandas as pd
+import argparse
+
+from models.model_utils import build_siamese_network, ContrastiveLoss
 from sklearn.preprocessing import LabelEncoder
 from utils.preprocess import map_labels, prepare_audio_and_labels, create_dataset, create_pairs
 
+parser = argparse.ArgumentParser()
+parser.add_argument('--path_to_dir', type=str, required=True, help='Path to dataset')
+parser.add_argument('--path_to_csv', type=str, required=True, help='Path to csv')
+args = vars(parser.parse_args())
+
 if __name__ == "__main__":
     le = LabelEncoder()
-    filenames = glob.glob("/content/vox/vox/vox_indian/**/**/*.wav")
-    df = pd.read_csv("/content/vox/vox/vox1_meta.csv", sep='\t')
+    filenames = glob.glob(args['path_to_dir'])
+    df = pd.read_csv(args['path_to_csv'], sep='\t')
 
     audio_files, labels = prepare_audio_and_labels(filenames)
     names = map_labels(labels, df)
