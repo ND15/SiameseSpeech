@@ -1,7 +1,7 @@
 import glob
 import numpy as np
 
-from model_utils import build_siamese_network, ContrastiveLoss
+from models.model_utils import build_siamese_network, ContrastiveLoss
 import tensorflow as tf
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder
@@ -16,7 +16,7 @@ if __name__ == "__main__":
     audio_files, labels = prepare_audio_and_labels(filenames, df)
     names = map_labels(labels, df)
 
-    random_indices = np.random.choice(4857, 10, replace=False)
+    random_indices = np.random.choice(4857, 150, replace=False)
 
     audio_files = np.asarray(audio_files)
     names = np.asarray(names)
