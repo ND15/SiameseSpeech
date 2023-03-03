@@ -1,8 +1,6 @@
 import glob
 import numpy as np
-import sys
 from models.model_utils import build_siamese_network, ContrastiveLoss
-import tensorflow as tf
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder
 from utils.preprocess import map_labels, prepare_audio_and_labels, create_dataset, create_pairs

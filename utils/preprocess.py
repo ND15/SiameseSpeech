@@ -3,7 +3,7 @@ import itertools
 import soundfile as sf
 import numpy as np
 from utils.audio_utils import MelSpec
-from hparams import hparams
+from utils.hparams import hparams
 
 
 def prepare_audio_and_labels(files):
