@@ -58,8 +58,3 @@ def build_siamese_network(image_size=(256, 400)):
     model = Model(inputs=[input_1, input_2], outputs=output)
 
     return model
-
-
-if __name__ == "__main__":
-    siamese = build_siamese_network()
-    siamese.summary()

@@ -2,12 +2,7 @@ import librosa
 import librosa.display
 import tensorflow as tf
 from functools import partial
-import urllib.request
-import io
 import numpy as np
-import matplotlib.pyplot as plt
-import soundfile as sf
-from hparams import hparams
 
 
 class MelSpec:
@@ -98,32 +93,3 @@ class MelSpec:
             )
         mel_spec_inv = tf.tensordot(S, tf.transpose(mel_inversion_matrix), 1)
         return mel_spec_inv
-
-
-if __name__ == "__main__":
-    mel = MelSpec(hparams)
-    pad_length = 102200
-
-    data, samplerate = sf.read("/home/nikhil/Datasets/vox_indian/archive/vox_indian/id10583/05gr63nmJS8/00001.wav")
-
-    if len(data) < pad_length:
-        data = np.pad(data, (0, pad_length - len(data)), 'constant', constant_values=(0, 0))
-    else:
-        data = data[:pad_length]
-
-    sf.write("test.wav", data, samplerate=samplerate)
-
-    mel_spectrogram = mel.mel_spectrogram(data.astype('float32'))
-    spectrogram = mel.spectrogram(data.astype('float32'))
-    print(mel_spectrogram.shape, spectrogram.shape)
-    mel_spectrogram_inv = mel.invert_mel_spectrogram(mel_spectrogram)
-    # compare lower frequencies to the original
-    fig, axs = plt.subplots(ncols=2, figsize=(20, 4))
-    cax0 = axs[0].matshow(mel_spectrogram_inv.numpy().T[:200, :], aspect='auto', origin='lower')
-    fig.colorbar(cax0, ax=axs[0])
-    axs[0].set_title('Inverted mel spectrogram (lower frequencies)')
-    cax1 = axs[1].matshow(spectrogram.numpy().T[:200, :], aspect='auto', origin='lower')
-    fig.colorbar(cax1, ax=axs[1])
-    axs[1].set_title('Original spectrogram (lower frequencies)')
-    fig.tight_layout()
-    plt.show()
