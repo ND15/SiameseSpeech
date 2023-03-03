@@ -7,8 +7,8 @@ from utils.preprocess import map_labels, prepare_audio_and_labels, create_datase
 
 if __name__ == "__main__":
     le = LabelEncoder()
-    filenames = glob.glob("D:/Downloads/Vox/vox1_indian/content/vox_indian/**/**/*.wav")
-    df = pd.read_csv("D:/Downloads/Vox/vox1_meta.csv", sep='\t')
+    filenames = glob.glob("/content/vox/vox/vox_indian/**/**/*.wav")
+    df = pd.read_csv("/content/vox/vox/vox1_meta.csv", sep='\t')
 
     audio_files, labels = prepare_audio_and_labels(filenames)
     names = map_labels(labels, df)
