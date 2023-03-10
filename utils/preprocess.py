@@ -2,6 +2,8 @@ import itertools
 
 import soundfile as sf
 import numpy as np
+from sklearn.preprocessing import LabelEncoder
+
 from utils.audio_utils import MelSpec
 from utils.hparams import hparams
 
@@ -43,7 +45,7 @@ def get_length(audio_files):
 
 def create_dataset(files, labels):
     mel = MelSpec(hparams)
-    total_len = 102200
+    total_len = 65536
 
     mels = []
     ids = []
@@ -78,5 +80,26 @@ def create_pairs(mels, labels):
 
     X_pairs = np.asarray(X_pairs)
     y_pairs = np.asarray(y_pairs)
+
+    return X_pairs, y_pairs
+
+
+def dataset(filenames, df):
+    le = LabelEncoder()
+
+    audio_files, labels = prepare_audio_and_labels(filenames)
+
+    names = map_labels(labels, df)
+
+    print(len(audio_files))
+
+    random_indices = np.random.choice(len(audio_files), 70, replace=False)
+
+    mels, ids = create_dataset(np.asarray(audio_files)[random_indices],
+                               np.asarray(names)[random_indices])
+
+    ids = le.fit_transform(ids)
+
+    X_pairs, y_pairs = create_pairs(mels, ids)
 
     return X_pairs, y_pairs

@@ -13,7 +13,7 @@ hparams = HParams(
     ref_level_db=50,
     min_level_db=-100,
     # mel scaling
-    num_mel_bins=256,
+    num_mel_bins=80,
     samplerate=16000,
     # inversion
     power=1.5,  # for spectral inversion

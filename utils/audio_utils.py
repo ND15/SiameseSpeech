@@ -1,8 +1,15 @@
+import io
+import urllib
+
 import librosa
 import librosa.display
+import soundfile as sf
 import tensorflow as tf
 from functools import partial
 import numpy as np
+from utils.hparams import hparams
+import matplotlib.pyplot as plt
+from models.model_utils import MBBlock
 
 
 class MelSpec:
@@ -93,3 +100,34 @@ class MelSpec:
             )
         mel_spec_inv = tf.tensordot(S, tf.transpose(mel_inversion_matrix), 1)
         return mel_spec_inv
+
+
+if __name__ == "__main__":
+    mel = MelSpec(hparams)
+    total_len = 102200
+    data, samplerate = librosa.load("D:/Downloads/vox/vox1_indian/content/vox_indian/id10002/0_laIeN-Q44/00001.wav",
+                                    sr=16000)
+    print(len(data))
+
+    if len(data) < total_len:
+        data = np.pad(data, (0, total_len - len(data)), 'constant', constant_values=(0, 0))
+    else:
+        data = data[:total_len]
+
+    mel_s = mel.mel_spectrogram(data.astype('float32'))
+
+    mel_s = mel_s.numpy().T
+    print(mel_s.shape)
+
+    x = MBBlock()(mel_s[..., np.newaxis])
+    print(x.shape)
+
+    fig, ax = plt.subplots(ncols=8, nrows=8, figsize=(15, 4))
+
+    for i in range(8):
+        for j in range(8):
+            ax[i, j].matshow(x[..., i + j], aspect='auto', origin='lower')
+            ax[i, j].axis('off')
+
+    fig.tight_layout()
+    plt.show()
