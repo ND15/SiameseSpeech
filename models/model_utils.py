@@ -78,12 +78,10 @@ def custom_build_siamese_network(filters=64):
         Reshape((80, 256, 1)),
         MBBlock(4, 32, strides=(2, 2)),
         MBBlock(4, 64, strides=(2, 2)),
-        MBBlock(4, 128, strides=(2, 2)),
+        MBBlock(4, 64, strides=(2, 2)),
         # MBBlock(4, 128, strides=(2, 2)),
         keras.layers.GlobalAveragePooling2D(),
-        Dropout(0.2),
-        Dense(128, activation='relu'),
-        Dropout(0.2),
+        Dense(64, activation='relu')
     ], name="embeddings")
 
     input_1 = Input((80, 256), name="input_1")
@@ -98,7 +96,13 @@ def custom_build_siamese_network(filters=64):
 
     concat = Concatenate()([feature_embeddings_1, feature_embeddings_2])
 
-    output = Dense(1, activation='sigmoid')(concat)
+    dense = Dense(64)(concat)
+
+    dense = BatchNormalization()(dense)
+
+    dense = ReLU()(dense)
+
+    output = Dense(1, activation='sigmoid')(dense)
 
     model = Model(inputs=[input_1, input_2], outputs=output)
 
@@ -117,16 +121,20 @@ class MBBlock(keras.layers.Layer):
 
         self.layers = [
             Conv2D(filters=self.filters, kernel_size=self.kernel_size[0], strides=self.strides[0],
-                   padding=self.padding, kernel_initializer="glorot_uniform", kernel_regularizer=keras.regularizers.l2(0.01)),
-            tfa.layers.InstanceNormalization(),
-            # keras.layers.BatchNormalization(),
-            ReLU(),
+                   padding=self.padding, kernel_initializer="he_normal", use_bias=False,
+                   kernel_regularizer=keras.regularizers.l1(0.02)),
+            # tfa.layers.InstanceNormalization(),
+            keras.layers.BatchNormalization(),
+            LeakyReLU(0.2),
+            Dropout(0.2),
 
             Conv2D(filters=self.filters * 2, kernel_size=self.kernel_size[1], strides=self.strides[1],
-                   padding=self.padding, kernel_initializer="glorot_uniform", kernel_regularizer=keras.regularizers.l2(0.01)),
-            # keras.layers.BatchNormalization(),
-            tfa.layers.InstanceNormalization(),
-            ReLU(),
+                   padding=self.padding, kernel_initializer="he_normal", use_bias=False,
+                   kernel_regularizer=keras.regularizers.l1(0.02)),
+            keras.layers.BatchNormalization(),
+            # tfa.layers.InstanceNormalization(),
+            LeakyReLU(0.2),
+            Dropout(0.2),
         ]
 
     def call(self, inputs):

@@ -11,7 +11,7 @@ from models.model_utils import custom_build_siamese_network
 from utils.audio_utils import MelSpec
 from utils.hparams import hparams
 
-BATCH_SIZE = 32
+BATCH_SIZE = 128
 BUFFER_SIZE = 1000
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 TRAINING_SIZE = 1060000
@@ -228,11 +228,11 @@ class SiameseModel_2(tf.keras.Model, ABC):
         x_1 = X_pairs[:, 0, :, :]
         x_2 = X_pairs[:, 1, :, :]
 
-        tf.print("Real:", y_pairs)
+        # tf.print("Real:", y_pairs[:128])
 
         with tf.GradientTape() as tape:
             y_pred = self.siamese_model([x_1, x_2])
-            tf.print("Pred:", y_pred)
+            tf.print("\nMax: ", tf.reduce_max(y_pred), "Min: ", tf.reduce_min(y_pred))
             loss = self.compiled_loss(y_pairs, y_pred, regularization_losses=self.losses)
 
         grads = tape.gradient(loss, self.siamese_model.trainable_weights)
@@ -273,6 +273,12 @@ def get_dataset(filename):
     return mel_train_dataset, mel_valid_dataset
 
 
+class LossAndErrorPrintingCallback(tf.keras.callbacks.Callback):
+    def on_train_batch_end(self, batch, logs=None):
+        print("Up to batch {}, the average loss is {:7.2f} and accuracy is {:7.2f}.".format(batch, logs["loss"],
+                                                                                            logs["accuracy"]))
+
+
 if __name__ == "__main__":
     # write_images_tfr("D:/Downloads/Vox/vox_custom/**/**/*.wav",
     #                  df="D:/Downloads/Vox/vox_custom/vox1_meta.csv")
@@ -292,11 +298,11 @@ if __name__ == "__main__":
     # model.compile(s_optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
     #               loss_fn=tf.keras.losses.BinaryCrossentropy())
 
-    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
+    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.001, decay=1e-6),
                   loss=tf.keras.losses.BinaryCrossentropy(),
                   metrics=["accuracy"])
 
-    model.fit(train_dataset, batch_size=BATCH_SIZE, epochs=25, steps_per_epoch=steps_per_epoch,
+    model.fit(train_dataset, batch_size=BATCH_SIZE, epochs=1000, steps_per_epoch=200,
               validation_data=valid_dataset, validation_steps=val_step_per_epoch)
 
     print(model.evaluate(valid_dataset, steps=1))
