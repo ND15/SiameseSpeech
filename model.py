@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import argparse
 
-from models.model_utils import build_siamese_network, ContrastiveLoss, custom_build_siamese_network
+from models.model_utils import build_siamese_network, ContrastiveLoss, build_siamese_network
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 from utils.preprocess import map_labels, prepare_audio_and_labels, create_dataset, create_pairs, dataset
@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
     X_train_pairs, X_test_pairs, y_train_pairs, y_test_pairs = train_test_split(X_pairs, y_pairs, test_size=0.2)
 
-    siamese = custom_build_siamese_network()
+    siamese = build_siamese_network()
     siamese.compile(loss="binary_crossentropy", metrics=["accuracy"], optimizer="sgd")
     siamese.summary()
 

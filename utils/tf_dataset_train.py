@@ -7,11 +7,13 @@ import pandas as pd
 import soundfile as sf
 import tensorflow as tf
 import numpy as np
-from models.model_utils import custom_build_siamese_network
+from models.model_utils import ContrastiveLoss, build_siamese_network
 from utils.audio_utils import MelSpec
 from utils.hparams import hparams
 
-BATCH_SIZE = 128
+INIT_LR = 1e-5
+MAX_LR = 1e-2
+BATCH_SIZE = 16
 BUFFER_SIZE = 1000
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 TRAINING_SIZE = 1060000
@@ -77,7 +79,7 @@ def create_dataset(files, labels):
         else:
             data = data[:total_len]
 
-        mel_spectrogram = mel.mel_spectrogram(data.astype('float32'))
+        mel_spectrogram = mel.spectrogram(data.astype('float32'))
         mels.append(mel_spectrogram.numpy().T)
         ids.append(label)
         print(f"Processed {file_name}")
@@ -123,6 +125,11 @@ def write_images_tfr(filenames, df, filename: str = "mels"):
     for t in itertools.product(tuples, tuples):
         mel_A, label_A = t[0]
         mel_B, label_B = t[1]
+
+        mel_A = mel_A[1:, :]
+        mel_B = mel_B[1:, :]
+
+        print(mel_A.shape, mel_B.shape)
 
         new_label = int(label_A == label_B)
 
@@ -231,13 +238,16 @@ class SiameseModel_2(tf.keras.Model, ABC):
         # tf.print("Real:", y_pairs[:128])
 
         with tf.GradientTape() as tape:
-            y_pred = self.siamese_model([x_1, x_2])
-            tf.print("\nMax: ", tf.reduce_max(y_pred), "Min: ", tf.reduce_min(y_pred))
+            y_pred = self.siamese_model([x_1, x_2], training=True)
+
+            # tf.print("\nMax: ", tf.reduce_max(y_pred), "Min: ", tf.reduce_min(y_pred))
+
             loss = self.compiled_loss(y_pairs, y_pred, regularization_losses=self.losses)
 
-        grads = tape.gradient(loss, self.siamese_model.trainable_weights)
+        grads = tape.gradient(loss, self.siamese_model.trainable_variables)
+
         self.optimizer.apply_gradients(
-            zip(grads, self.siamese_model.trainable_weights)
+            zip(grads, self.siamese_model.trainable_variables)
         )
 
         self.compiled_metrics.update_state(y_pairs, y_pred)
@@ -261,14 +271,15 @@ class SiameseModel_2(tf.keras.Model, ABC):
 def get_dataset(filename):
     dataset = tf.data.TFRecordDataset(filename, compression_type='GZIP')
     dataset = dataset.map(parse_tfr_element)
+
     dataset = dataset.shuffle(buffer_size=BUFFER_SIZE, reshuffle_each_iteration=False)
     dataset = dataset.repeat()
-    dataset = dataset.batch(BATCH_SIZE, drop_remainder=True, num_parallel_calls=AUTOTUNE)
+    dataset = dataset.batch(BATCH_SIZE, drop_remainder=True)
     dataset = dataset.prefetch(buffer_size=AUTOTUNE)
 
     mel_valid_dataset = dataset.take(VAL_SIZE)
 
-    mel_train_dataset = dataset.skip(VAL_SIZE).take(TRAINING_SIZE)
+    mel_train_dataset = dataset.take(TRAINING_SIZE)
 
     return mel_train_dataset, mel_valid_dataset
 
@@ -280,12 +291,13 @@ class LossAndErrorPrintingCallback(tf.keras.callbacks.Callback):
 
 
 if __name__ == "__main__":
-    # write_images_tfr("D:/Downloads/Vox/vox_custom/**/**/*.wav",
-    #                  df="D:/Downloads/Vox/vox_custom/vox1_meta.csv")
+    # write_images_tfr("D:/Downloads/Vox/vox_custom_2/**/**/*.wav",
+    #                  df="D:/Downloads/Vox/vox_custom_2/vox1_meta.csv",
+    #                  filename='specs')
 
-    train_dataset, valid_dataset = get_dataset("mels.tfrecords")
+    train_dataset, valid_dataset = get_dataset("specs.tfrecords")
 
-    siamese_model = custom_build_siamese_network()
+    siamese_model = build_siamese_network()
 
     model = SiameseModel_2(siamese_model)
 
@@ -295,11 +307,8 @@ if __name__ == "__main__":
 
     steps_per_epoch = compute_steps_per_epoch(TRAINING_SIZE)
 
-    # model.compile(s_optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
-    #               loss_fn=tf.keras.losses.BinaryCrossentropy())
-
-    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.001, decay=1e-6),
-                  loss=tf.keras.losses.BinaryCrossentropy(),
+    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001),
+                  loss=ContrastiveLoss(),
                   metrics=["accuracy"])
 
     model.fit(train_dataset, batch_size=BATCH_SIZE, epochs=1000, steps_per_epoch=200,

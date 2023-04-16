@@ -1,4 +1,7 @@
 __pycache__/
 models/__pycache__/
 utils/__pycache__/
-utils/mels.tfrecords
+utils/specs.tfrecords
+../baseline_modsl.py
+utils/preprocess.py
+model.py

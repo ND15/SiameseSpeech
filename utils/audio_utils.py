@@ -5,11 +5,9 @@ import librosa
 import librosa.display
 import soundfile as sf
 import tensorflow as tf
-from functools import partial
 import numpy as np
-from utils.hparams import hparams
+from .hparams import hparams
 import matplotlib.pyplot as plt
-from models.model_utils import MBBlock
 
 
 class MelSpec:
@@ -26,6 +24,7 @@ class MelSpec:
         self.power = hp.power
         self.griffin_lim_iters = hp.griffin_lim_iters
         self.padding = hp.pad
+
         self.mel_matrix = tf.signal.linear_to_mel_weight_matrix(
             num_mel_bins=self.num_mel_bins,
             num_spectrogram_bins=int(self.fft_length / 2) + 1,
@@ -39,6 +38,13 @@ class MelSpec:
     def normalize(self, S):
         return tf.clip_by_value(
             (S - self.min_level_dB) / -self.min_level_dB, 0, 1)
+
+    def denormalize(self, S):
+        return (tf.clip_by_value(S, 0, 1) * -self.min_level_dB) + self.min_level_dB
+
+    @staticmethod
+    def db_to_amp(S):
+        return tf.math.pow(tf.ones(tf.shape(S)) * 10.0, S * 0.05)
 
     @staticmethod
     def tf_log_base(base, S):
@@ -56,9 +62,7 @@ class MelSpec:
             frame_length=self.frame_length,
             frame_step=self.frame_step,
             fft_length=self.fft_length,
-            window_fn=partial(
-                tf.signal.hann_window,
-                periodic=True),
+            window_fn=tf.signal.hann_window,
             pad_end=True,
         )
         return stft
@@ -101,33 +105,34 @@ class MelSpec:
         mel_spec_inv = tf.tensordot(S, tf.transpose(mel_inversion_matrix), 1)
         return mel_spec_inv
 
+    def inv_spectrogram(self, S):
+        return self.db_to_amp(
+            self.denormalize(S) + self.ref_level_dB
+        )
+
 
 if __name__ == "__main__":
     mel = MelSpec(hparams)
     total_len = 102200
-    data, samplerate = librosa.load("D:/Downloads/vox/vox1_indian/content/vox_indian/id10002/0_laIeN-Q44/00001.wav",
-                                    sr=16000)
+    url = "https://raw.githubusercontent.com/timsainb/python_spectrograms_and_inversion/master/bushOffersPeace.wav"
+    response = urllib.request.urlopen(url)
+    data, samplerate = sf.read(io.BytesIO(response.read()))
+    # data, samplerate = librosa.load("D:/MyWork/Journal_01/UNet_Music/musdb_resampled/test/4/mixture.wav",
+    #                                 sr=22050)
     print(len(data))
 
-    if len(data) < total_len:
-        data = np.pad(data, (0, total_len - len(data)), 'constant', constant_values=(0, 0))
-    else:
-        data = data[:total_len]
+    # if len(data) < total_len:
+    #     data = np.pad(data, (0, total_len - len(data)), 'constant', constant_values=(0, 0))
+    # else:
+    #     data = data[:total_len]
 
     mel_s = mel.mel_spectrogram(data.astype('float32'))
-
-    mel_s = mel_s.numpy().T
-    print(mel_s.shape)
-
-    x = MBBlock()(mel_s[..., np.newaxis])
-    print(x.shape)
-
-    fig, ax = plt.subplots(ncols=8, nrows=8, figsize=(15, 4))
-
-    for i in range(8):
-        for j in range(8):
-            ax[i, j].matshow(x[..., i + j], aspect='auto', origin='lower')
-            ax[i, j].axis('off')
-
-    fig.tight_layout()
+    # fig, ax = plt.subplots()
+    # img = librosa.display.specshow(mel_s.T, x_axis='time',
+    #                                y_axis='mel', sr=22050,
+    #                                fmax=16000, ax=ax)
+    # fig.colorbar(img, ax=ax, format='%+2.0f dB')
+    # ax.set(title='Mel-frequency spectrogram')
+    # plt.show()
+    plt.matshow(mel_s.numpy().T, aspect='auto', origin='lower')
     plt.show()
