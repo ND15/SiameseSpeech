@@ -18,5 +18,8 @@ from the paper which includes window length, hop size, etc.<br>
  the recordings of the Indian celebrities, further for the ease of implementation for each 
  speaker I took only 25-30 recordings.
 
+## Updates
+- [Speech-Recognition](https://github.com/ND15/Speech-Recognition) a repo for DNN based speech recognition and verification.
+
 ## Links
 - [Dataset](https://www.kaggle.com/datasets/gaurav41/voxceleb1-audio-wav-files-for-india-celebrity)
